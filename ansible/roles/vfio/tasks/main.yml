@@ -1,0 +1,39 @@
+---
+- name: Ensure IOMMU options in /etc/kernel/cmdline
+  ansible.builtin.lineinfile:
+    path: /etc/kernel/cmdline
+    regexp: '^(.*?)(\s+amd_iommu=on)?(\s+iommu=pt)?\s*$'
+    line: "\\1 {{ kernel_cmdline_opts }}"
+    backrefs: true
+  notify: Refresh proxmox boot
+
+- name: Load vfio modules at boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/vfio.conf
+    content: |
+      vfio
+      vfio_iommu_type1
+      vfio_pci
+    mode: "0644"
+  notify: Update initramfs
+
+- name: Bind target devices to vfio-pci by ID
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/vfio.conf
+    content: |
+      options vfio-pci ids={{ vfio_pci_ids }}
+      softdep nvidia pre: vfio-pci
+      softdep nouveau pre: vfio-pci
+    mode: "0644"
+  notify: Update initramfs
+
+- name: Blacklist host GPU drivers so they never grab the cards
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/blacklist-gpu.conf
+    content: |
+      blacklist nouveau
+      blacklist nvidia
+      blacklist nvidiafb
+      blacklist snd_hda_intel
+    mode: "0644"
+  notify: Update initramfs
