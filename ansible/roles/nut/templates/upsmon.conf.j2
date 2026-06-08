@@ -1,0 +1,7 @@
+MONITOR {{ nut_ups_name }}@localhost 1 {{ nut_monitor_user }} {{ nut_monitor_password }} master
+MINSUPPLIES 1
+SHUTDOWNCMD "/sbin/poweroff"
+POLLFREQ 5
+POLLFREQALERT 5
+HOSTSYNC 15
+DEADTIME 15
