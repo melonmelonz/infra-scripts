@@ -11,11 +11,12 @@ the console.
   rely on it. Verify IPMI is actually populated on the SE board variant.
 - Set sane 24/7 fan curves.
 
-## B. Install Proxmox VE 8.x
+## B. Install Proxmox VE 9.2 (Debian 13 / trixie base)
 - Root on the **ZFS mirror** (2×2 TB Gen5). Leave the 4 TB M.2 as scratch.
 - Update packages. (ARC cap is applied by Ansible in step C.)
-- Use a current 8.x kernel — the 5080 is Blackwell and needs recent PCIe
-  enumeration.
+- 9.2 ships a recent 6.x kernel — important for the Blackwell 5080's PCIe
+  enumeration. (The Ansible Tailscale role auto-detects the Debian codename, so it
+  works on trixie without changes.)
 
 ## C. Host prep via Ansible (this repo)
 1. **Discovery** — collect the hardware-specific values:
