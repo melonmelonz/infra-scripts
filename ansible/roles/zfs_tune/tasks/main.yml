@@ -1,0 +1,11 @@
+---
+- name: Set zfs_arc_max via modprobe (persists across reboot)
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/zfs.conf
+    content: "options zfs zfs_arc_max={{ zfs_arc_max_bytes }}\n"
+    mode: "0644"
+  notify: Update initramfs
+
+- name: Apply zfs_arc_max live (no reboot needed for the running value)
+  ansible.builtin.shell: "echo {{ zfs_arc_max_bytes }} > /sys/module/zfs/parameters/zfs_arc_max"
+  changed_when: true
