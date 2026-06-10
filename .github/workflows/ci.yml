@@ -1,0 +1,34 @@
+name: ci
+
+# Offline IaC validation: proves the Ansible roles and OpenTofu config are
+# well-formed on every push/PR, WITHOUT touching the real Proxmox host.
+on:
+  push:
+  pull_request:
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ansible-lint
+        run: pipx install ansible-core ansible-lint
+      - name: Lint Ansible (production profile, includes yamllint checks)
+        working-directory: ansible
+        run: ansible-lint
+
+  opentofu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_wrapper: false
+      - name: Format check
+        working-directory: opentofu
+        run: tofu fmt -check
+      - name: Init (no backend, no host contact) and validate
+        working-directory: opentofu
+        run: |
+          tofu init -backend=false
+          tofu validate

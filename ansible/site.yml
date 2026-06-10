@@ -1,0 +1,9 @@
+---
+- name: Proxmox host preparation
+  hosts: proxmox
+  become: true
+  roles:
+    - vfio
+    - zfs_tune
+    - nut
+    - tailscale

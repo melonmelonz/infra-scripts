@@ -1,0 +1,21 @@
+---
+# Filled on build day via `lspci -nn | grep -iE 'nvidia|audio'`.
+# Include BOTH the GPU function AND its HDMI-audio function for each card.
+# Format: comma-separated vendor:device pairs, e.g.
+# "10de:2c02,10de:22e9,10de:2206,10de:1aef"
+vfio_pci_ids: "REPLACE:WITH,REAL:IDS"
+
+# Kernel cmdline additions for IOMMU + passthrough.
+kernel_cmdline_opts: "amd_iommu=on iommu=pt"
+
+# ZFS ARC cap in bytes (~8 GiB) so ARC does not starve VM RAM.
+zfs_arc_max_bytes: 8589934592
+
+# Tailscale auth key — DO NOT COMMIT. Pass at runtime:
+#   ansible-playbook site.yml -e "tailscale_authkey=tskey-..."
+tailscale_authkey: ""
+
+# NUT: APC SMT1500C over USB.
+nut_ups_name: apc
+nut_monitor_user: upsmon
+nut_monitor_password: "CHANGE_ME_AT_RUNTIME"

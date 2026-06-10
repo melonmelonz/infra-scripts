@@ -1,0 +1,57 @@
+---
+- name: Install NUT
+  ansible.builtin.apt:
+    name: nut
+    state: present
+    update_cache: true
+
+- name: Set NUT mode to standalone
+  ansible.builtin.copy:
+    dest: /etc/nut/nut.conf
+    content: "MODE=standalone\n"
+    mode: "0644"
+  notify: Restart nut
+
+- name: Template ups.conf
+  ansible.builtin.template:
+    src: ups.conf.j2
+    dest: /etc/nut/ups.conf
+    mode: "0640"
+    group: nut
+  notify: Restart nut
+
+- name: Template upsd.conf
+  ansible.builtin.template:
+    src: upsd.conf.j2
+    dest: /etc/nut/upsd.conf
+    mode: "0640"
+    group: nut
+  notify: Restart nut
+
+- name: Define upsd monitor user
+  ansible.builtin.copy:
+    dest: /etc/nut/upsd.users
+    content: |
+      [{{ nut_monitor_user }}]
+          password = {{ nut_monitor_password }}
+          upsmon master
+    mode: "0640"
+    group: nut
+  notify: Restart nut
+
+- name: Template upsmon.conf
+  ansible.builtin.template:
+    src: upsmon.conf.j2
+    dest: /etc/nut/upsmon.conf
+    mode: "0640"
+    group: nut
+  notify: Restart nut
+
+- name: Enable NUT services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - nut-server
+    - nut-monitor
