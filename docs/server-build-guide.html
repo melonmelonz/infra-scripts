@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Point-Cloud / Multi-Tenant Server — Build Guide</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 16mm 18mm 16mm;
+    @bottom-center {
+      content: "Point-Cloud Server Build Guide";
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 8pt; color: #8a8f98; letter-spacing: .04em;
+    }
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 8pt; color: #8a8f98;
+    }
+  }
+  @page :first { margin: 0; @bottom-center { content: none; } @bottom-right { content: none; } }
+
+  * { box-sizing: border-box; }
+  html { font-family: 'DejaVu Sans', sans-serif; color: #1d2127; font-size: 10.2pt; line-height: 1.5; }
+  body { margin: 0; padding: 0; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    page-break-after: always;
+    height: 297mm; width: 210mm;
+    background: linear-gradient(150deg, #0b1020 0%, #14213d 45%, #1d3a6b 100%);
+    color: #f3f5f9; position: relative; padding: 34mm 22mm;
+  }
+  .cover .kicker { font-size: 10pt; letter-spacing: .35em; text-transform: uppercase; color: #7fb2ff; margin: 0 0 14mm 0; }
+  .cover h1 { font-size: 33pt; line-height: 1.1; margin: 0 0 6mm 0; font-weight: 800; letter-spacing: -.01em; }
+  .cover .sub { font-size: 13pt; color: #c2cde0; max-width: 150mm; line-height: 1.55; }
+  .cover .meta { position: absolute; bottom: 30mm; left: 22mm; right: 22mm; font-size: 9.5pt; color: #93a4c4; border-top: 1px solid #2c477e; padding-top: 6mm; display: flex; justify-content: space-between; }
+  .cover .chips { position: absolute; bottom: 52mm; left: 22mm; right: 22mm; }
+  .cover .chip { display: inline-block; border: 1px solid #3b5a93; border-radius: 20px; padding: 4px 13px; margin: 0 6px 8px 0; font-size: 8.6pt; color: #d6e1f3; background: rgba(255,255,255,.04); }
+  .cover .dib { position:absolute; top: 34mm; right: 22mm; width: 46mm; height: 46mm; border-radius: 12px; border: 1px solid #34518a; background: rgba(127,178,255,.07); }
+  .cover .dib::after{ content:"⌬"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size: 30pt; color:#7fb2ff; }
+
+  /* ---------- Headings ---------- */
+  h2 { font-size: 17pt; margin: 0 0 3mm 0; color: #14213d; letter-spacing: -.01em; padding-bottom: 2mm; border-bottom: 2px solid #e6a23c; }
+  h2 .num { color: #c47f12; font-weight: 800; margin-right: 8px; }
+  h3 { font-size: 12.5pt; margin: 6mm 0 2mm 0; color: #1d3a6b; }
+  h4 { font-size: 10.6pt; margin: 4mm 0 1mm 0; color: #2a2f3a; }
+  p { margin: 0 0 2.6mm 0; }
+  a { color: #1d3a6b; text-decoration: none; }
+  ul, ol { margin: 0 0 3mm 0; padding-left: 6mm; }
+  li { margin: 0 0 1.4mm 0; }
+  strong { color: #14213d; }
+  .lead { font-size: 11pt; color: #444b57; }
+
+  .section { page-break-inside: avoid; }
+  .pb { page-break-before: always; }
+
+  /* ---------- Code ---------- */
+  code { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.6pt; background: #eef1f6; padding: 1px 4px; border-radius: 3px; color: #1d3a6b; }
+  pre { font-family: 'DejaVu Sans Mono', monospace; font-size: 8.3pt; line-height: 1.45; background: #0f1626; color: #d6e1f3; border-radius: 7px; padding: 4mm 5mm; margin: 2mm 0 3.5mm 0; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
+  pre .c { color: #6f86b8; } /* comment */
+  pre .k { color: #7fd1b8; } /* key/cmd */
+
+  /* ---------- Callouts ---------- */
+  .box { border-radius: 7px; padding: 3.5mm 4.5mm; margin: 2.5mm 0 3.5mm 0; page-break-inside: avoid; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .t { font-weight: 700; display: block; margin-bottom: 1.5mm; font-size: 9.6pt; letter-spacing: .02em; text-transform: uppercase; }
+  .danger { background: #fdecec; border-left: 4px solid #d64545; }
+  .danger .t { color: #b32424; }
+  .warn { background: #fff6e6; border-left: 4px solid #e6a23c; }
+  .warn .t { color: #b9791a; }
+  .info { background: #eaf2fb; border-left: 4px solid #3b6fb5; }
+  .info .t { color: #2c5896; }
+  .ok { background: #eaf7ee; border-left: 4px solid #3a9d5d; }
+  .ok .t { color: #2a7a47; }
+
+  /* ---------- Tables ---------- */
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm 0; font-size: 9.2pt; page-break-inside: avoid; }
+  th { background: #14213d; color: #fff; text-align: left; padding: 2mm 3mm; font-weight: 600; font-size: 8.8pt; }
+  td { padding: 2mm 3mm; border-bottom: 1px solid #e2e6ee; vertical-align: top; }
+  tr:nth-child(even) td { background: #f6f8fb; }
+
+  /* ---------- Cards ---------- */
+  .grid { display: flex; flex-wrap: wrap; gap: 3mm; margin: 2mm 0 3mm 0; }
+  .card { flex: 1 1 44%; border: 1px solid #dde2ec; border-radius: 8px; padding: 3.5mm 4mm; page-break-inside: avoid; }
+  .card .ct { font-weight: 700; color: #14213d; font-size: 10.4pt; margin-bottom: 1mm; }
+  .card .cm { color: #6a7180; font-size: 8.6pt; }
+
+  .stepnum { display:inline-block; background:#e6a23c; color:#fff; font-weight:800; border-radius:50%; width:18px; height:18px; text-align:center; font-size:9pt; line-height:18px; margin-right:5px; }
+
+  .toc li { margin-bottom: 2mm; font-size: 10.5pt; }
+  .toc .pg { color: #c47f12; font-weight: 700; }
+  .star { color: #e6a23c; }
+
+  .ascii { font-family: 'DejaVu Sans Mono', monospace; font-size: 7.7pt; line-height: 1.3; background: #f6f8fb; border: 1px solid #e2e6ee; border-radius: 6px; padding: 3mm; white-space: pre; color: #2a2f3a; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<div class="cover">
+  <div class="dib"></div>
+  <p class="kicker">Infrastructure Runbook</p>
+  <h1>Point-Cloud &amp;<br>Multi-Tenant<br>Server Build</h1>
+  <p class="sub">A single Threadripper PRO box running Proxmox VE, serving four
+  workloads at once. This guide walks the whole build — sequenced so your
+  friend's Windows machine comes up first.</p>
+  <div class="chips">
+    <span class="chip">Proxmox VE 9.x</span>
+    <span class="chip">Threadripper PRO 9965WX · 24c/48t</span>
+    <span class="chip">192 GB ECC</span>
+    <span class="chip">RTX 5080 + 3080 passthrough</span>
+    <span class="chip">MikroTik RB5009 · VLANs</span>
+    <span class="chip">Windows-first</span>
+  </div>
+  <div class="meta">
+    <span>Prepared for Penn &amp; co.</span>
+    <span>2026-06-10</span>
+    <span>infra-scripts / docs</span>
+  </div>
+</div>
+
+<!-- ============================ TOC / WHERE WE ARE ============================ -->
+<div class="section">
+  <h2><span class="num">0</span>Where we are &amp; how to read this</h2>
+  <p class="lead">Proxmox VE is installed on the server, and the server lives at
+  your friend's place with him. You're holding the MikroTik at your bench. So the
+  job now is: pre-stage the network here, finish host prep, then stand up the
+  Windows VM first, then everything else.</p>
+
+  <div class="box ok">
+    <span class="t">Done so far</span>
+    <p>Hardware assembled · Proxmox VE installed on the ZFS mirror · you can reach
+    the Proxmox web UI. That's the end of <em>Phase 1–2</em> below.</p>
+  </div>
+
+  <h3>The order of operations</h3>
+  <table>
+    <tr><th style="width:9%">Phase</th><th style="width:43%">What</th><th style="width:20%">Where</th><th>Status</th></tr>
+    <tr><td>0</td><td>Pre-stage MikroTik VLANs</td><td>Your bench</td><td>Do now (in parallel)</td></tr>
+    <tr><td>1</td><td>BIOS / firmware / IPMI lifeline</td><td>Friend's (server)</td><td>Verify settings</td></tr>
+    <tr><td>2</td><td>Proxmox host + Ansible prep (VFIO, ARC, NUT, Tailscale)</td><td>Friend's (server)</td><td>Installed → run prep</td></tr>
+    <tr><td>3</td><td>Ship router · wire VLANs · vmbr0 VLAN-aware</td><td>Friend's</td><td>After Phase 0</td></tr>
+    <tr><td><span class="star">★</span> 4</td><td><strong>Windows-main VM (the friend's machine)</strong></td><td>Friend's</td><td>First VM up</td></tr>
+    <tr><td>5</td><td>Services · DayZ · Linux-compile VMs</td><td>Friend's</td><td>After Windows works</td></tr>
+    <tr><td>6</td><td>Resilience: NUT + Proxmox Backup Server</td><td>Friend's</td><td>Before "done"</td></tr>
+    <tr><td>7</td><td>Validation pass</td><td>Both</td><td>Sign-off</td></tr>
+  </table>
+
+  <div class="box info">
+    <span class="t">How to read each phase</span>
+    <p>Every phase has a <strong>goal</strong>, the <strong>steps</strong>, and a
+    <strong>“green light” check</strong> you must pass before moving on. Don't skip
+    a green light — especially the IPMI one in Phase 1. It's the only way back into
+    a box that's three rooms (or a city) away.</p>
+  </div>
+</div>
+
+<!-- ============================ SYSTEM AT A GLANCE ============================ -->
+<div class="section pb">
+  <h2><span class="num">·</span>The system at a glance</h2>
+
+  <div class="grid">
+    <div class="card"><div class="ct">CPU</div><div class="cm">AMD Threadripper PRO 9965WX — 24c / 48t, sTR5 / WRX90</div></div>
+    <div class="card"><div class="ct">Board</div><div class="cm">ASUS Pro WS WRX90E-SAGE SE — 8-ch ECC, 128 PCIe5 lanes, 10 GbE, AST2600 BMC + IPMI</div></div>
+    <div class="card"><div class="ct">RAM</div><div class="cm">192 GB = 8×24 GB DDR5-6000 ECC RDIMM</div></div>
+    <div class="card"><div class="ct">GPUs</div><div class="cm">RTX 5080 16 GB → Windows-main · RTX 3080 10 GB → Services</div></div>
+    <div class="card"><div class="ct">Storage</div><div class="cm">2×2 TB Samsung 9100 PRO (ZFS mirror) + 1×4 TB Gen4 M.2 (scratch)</div></div>
+    <div class="card"><div class="ct">Power / cooling</div><div class="cm">Corsair HX1500i · Noctua NH-U14S TR5-SP6 · Corsair 9000D · APC SMT1500C</div></div>
+    <div class="card"><div class="ct">Edge</div><div class="cm">MikroTik RB5009UPr+S+IN — firewall, inter-VLAN routing, 10G SFP+ trunk</div></div>
+    <div class="card"><div class="ct">Backup (separate box)</div><div class="cm">Recased workstation · 64 GB · 3×16 TB RAIDZ1 · RTX 5070 Ti · Proxmox Backup Server</div></div>
+  </div>
+
+  <h3>What runs where</h3>
+  <div class="ascii">Proxmox VE host  ·  9965WX / 192 GB / 5080 + 3080
+ |
+ |--  Windows-main   5080 passthrough · Trion + point cloud + gaming · Sunshine host
+ |                   ~136-140 GB LOCKED · ballooning OFF · ~12-14 cores (float)   [VLAN 30]
+ |
+ |--  Linux compile  NixOS · NO GPU · balloon 16->150 GB · 4-6 cores pinned       [VLAN 10]
+ |                   Penn's remote SSH kernel-build box
+ |
+ |--  Services       3080 passthrough (NVENC) · Linux · ~16 GB · 2 cores          [VLAN 20]
+ |                   Jellyfin + thin DBs
+ |
+ |--  DayZ           Windows · no GPU · ~8 GB · 2-3 cores · Deer Isle + Expansion  [VLAN 20]
+ |
+ |--  Host           BMC/IPMI console (no GPU consumed) · ~2 cores · ZFS ARC ~8 GB [VLAN 10]</div>
+
+  <div class="box warn">
+    <span class="t">The one rule that explains the whole RAM plan</span>
+    <p>GPU passthrough <strong>pins</strong> a VM's RAM for DMA, so a passthrough VM
+    <strong>cannot balloon</strong>. Windows-main's ~138 GB only returns to the pool
+    when that VM is <strong>powered off</strong> — not when the friend closes
+    Moonlight, not when Windows is idle or asleep. That's why hugepages are
+    on-demand (not boot-reserved) and why the Linux compile VM only grows past its
+    ~16 GB floor when you deliberately shut Windows down ("Big-Linux mode").</p>
+  </div>
+
+  <h3>Resource budget (all four VMs running)</h3>
+  <table>
+    <tr><th>VM</th><th>RAM</th><th>Cores</th><th>GPU</th><th>Balloon</th></tr>
+    <tr><td>Host + ZFS ARC</td><td>~10 GB</td><td>~2</td><td>—</td><td>ARC capped ~8 GB</td></tr>
+    <tr><td><strong>Windows-main</strong></td><td>~136–140 GB</td><td>~12–14 (float)</td><td>RTX 5080</td><td><strong>OFF (locked)</strong></td></tr>
+    <tr><td>Services</td><td>~16 GB</td><td>~2</td><td>RTX 3080</td><td>OFF (locked)</td></tr>
+    <tr><td>DayZ</td><td>~8 GB</td><td>2–3</td><td>—</td><td>optional</td></tr>
+    <tr><td>Linux compile</td><td>16 → 150 GB</td><td>4–6 pinned</td><td>—</td><td>ON</td></tr>
+    <tr><td colspan="5"><em>Committed ≈ 188 GB, ~4 GB slack. Windows + Linux never both want their max — that's by design.</em></td></tr>
+  </table>
+</div>
+
+<!-- ============================ PHASE 0: MIKROTIK ============================ -->
+<div class="section pb">
+  <h2><span class="num">0</span>Pre-stage the MikroTik at your bench</h2>
+  <p class="lead">Yes — you can absolutely build the VLANs now at your place, then
+  ship the router to your friend. RouterOS config lives on the device, so a router
+  you configure here arrives ready to drop in. This is the smart move: do the
+  fiddly, lock-out-prone part on a bench where a mistake costs nothing.</p>
+
+  <div class="box info">
+    <span class="t">What "pre-staging" means here</span>
+    <p>You power the RB5009 on your desk, push the full VLAN + firewall config,
+    verify it boots clean, then box it up. At the friend's you just plug WAN +
+    the trunk + access ports into the right jacks and it works. <strong>Nothing in
+    the config depends on being physically at the friend's</strong> except the WAN
+    DHCP lease, which it picks up on arrival.</p>
+  </div>
+
+  <h3>The VLAN map you're staging</h3>
+  <table>
+    <tr><th>VLAN</th><th>Name</th><th>Subnet</th><th>Members</th></tr>
+    <tr><td>10</td><td>mgmt</td><td>10.10.10.0/24</td><td>Router, PVE host mgmt, BMC/IPMI, PBS, Linux-compile VM</td></tr>
+    <tr><td>20</td><td>servers</td><td>10.10.20.0/24</td><td>Services VM (Jellyfin/DBs), DayZ VM, backup box</td></tr>
+    <tr><td>30</td><td>gaming</td><td>10.10.30.0/24</td><td>Windows-main VM <strong>+ friend's mini PC</strong></td></tr>
+    <tr><td>40</td><td>trusted</td><td>10.10.40.0/24</td><td>Penn's laptop, workstations, spare ports</td></tr>
+  </table>
+
+  <div class="box ok">
+    <span class="t">Why the mini PC and Windows-main share VLAN 30</span>
+    <p>Same broadcast domain = Moonlight auto-discovery (mDNS) works, and the
+    latency-critical stream is <strong>L2 hardware-switched</strong> — it never
+    touches the router CPU. That's how you get sub-millisecond in-room streaming.
+    Keep them together.</p>
+  </div>
+
+  <h3>Bench procedure</h3>
+  <ol>
+    <li><span class="stepnum">1</span><strong>Update firmware first.</strong> In Winbox: <code>/system package update</code> then <code>/system routerboard upgrade</code>, reboot between. Set a strong admin password; disable telnet/ftp/www/api-ssl.</li>
+    <li><span class="stepnum">2</span><strong>Connect via Winbox over MAC</strong> (not IP) — it survives the IP changes you're about to cause, so you can't lock yourself out mid-config.</li>
+    <li><span class="stepnum">3</span><strong>Paste the full config</strong> from <code>docs/network-topology.md</code> — bridge, ports, VLAN membership, gateways, DHCP, NAT, firewall — <strong>but leave the very last line off.</strong></li>
+    <li><span class="stepnum">4</span><strong>Verify you still have access</strong>, then enable VLAN filtering <em>last</em>:</li>
+  </ol>
+  <pre><span class="c"># ONLY after everything else is in and you've confirmed access:</span>
+/interface bridge set bridge vlan-filtering=yes</pre>
+
+  <div class="box danger">
+    <span class="t">Classic lock-out</span>
+    <p>Turning on <code>vlan-filtering=yes</code> with a wrong tagged/untagged map
+    cuts your own connection. On a bench that's a 30-second power-cycle; at the
+    friend's with the router in a closet it's a bad evening. <strong>This is the
+    entire reason to stage at home.</strong></p>
+  </div>
+
+  <h3>Green light before you box it up</h3>
+  <ul>
+    <li><code>/interface bridge vlan print</code> shows the tagged/untagged map you expect.</li>
+    <li><code>/ip address print</code> shows all four gateways (…10.1, .20.1, .30.1, .40.1).</li>
+    <li>A laptop on <code>ether2</code> gets a <code>10.10.30.x</code> lease; on <code>ether5</code> gets <code>10.10.40.x</code>.</li>
+    <li>That laptop can reach the internet through the router.</li>
+  </ul>
+  <p>Label the ports with tape (WAN / trunk / mini-PC / IPMI / backup) so the
+  friend-side plug-in is foolproof, then ship it.</p>
+</div>
+
+<!-- ============================ PHASE 1: BIOS ============================ -->
+<div class="section pb">
+  <h2><span class="num">1</span>BIOS, firmware &amp; the IPMI lifeline</h2>
+  <p class="lead">Since Proxmox is already installed, most of this is a verify pass —
+  but confirm these or passthrough will fail later in ways that are hard to debug
+  remotely.</p>
+
+  <h3>BIOS settings to confirm</h3>
+  <table>
+    <tr><th>Setting</th><th>Value</th><th>Why</th></tr>
+    <tr><td>IOMMU / AMD-Vi</td><td>Enabled</td><td>Required for any GPU passthrough</td></tr>
+    <tr><td>SR-IOV / ACS</td><td>Enabled (if present)</td><td>Cleaner IOMMU group isolation</td></tr>
+    <tr><td>Above-4G Decoding</td><td>Enabled</td><td>Large-BAR GPUs (5080 16 GB) need it</td></tr>
+    <tr><td>Resizable BAR</td><td>Enabled</td><td>Blackwell 5080 PCIe enumeration</td></tr>
+    <tr><td>Fan curves</td><td>24/7 sane profile</td><td>Box runs unattended at the friend's</td></tr>
+  </table>
+
+  <div class="box danger">
+    <span class="t">★ The IPMI lifeline — do not skip</span>
+    <p>The WRX90E-SAGE SE has an AST2600 BMC with a dedicated IPMI port. Get it on
+    <strong>VLAN 10 (mgmt)</strong>, set a password, and <strong>confirm the remote
+    KVM (HTML5 console) actually works from another machine</strong> before you
+    rely on it. When passthrough binds both GPUs to vfio, the host has <em>no
+    local video</em> — IPMI is your only console. Verify it's populated on the
+    <em>SE</em> variant specifically; that's an open item in the spec.</p>
+  </div>
+
+  <p><strong>Green light:</strong> you can open the IPMI HTML5 console from a second
+  machine, see the Proxmox login, and "mount ISO" works. That's your remote hands.</p>
+</div>
+
+<!-- ============================ PHASE 2: HOST PREP ============================ -->
+<div class="section pb">
+  <h2><span class="num">2</span>Proxmox host prep (VFIO, ARC, NUT, Tailscale)</h2>
+  <p class="lead">Proxmox is installed; now configure the host-level things OpenTofu
+  can't manage. This is exactly what the <code>ansible/</code> role in this repo
+  does — one playbook does VFIO binding, ARC cap, NUT, and Tailscale.</p>
+
+  <h3><span class="stepnum">1</span>Discovery — collect the hardware-specific values (run on the host)</h3>
+  <pre><span class="k">lspci -nn | grep -iE 'nvidia|audio'</span>   <span class="c"># -> the PCI IDs: GPU + audio fn of EACH card</span>
+<span class="k">ip -br link</span>                            <span class="c"># -> the NIC name (10G)</span>
+<span class="k">ls -l /dev/disk/by-id/</span>                 <span class="c"># -> stable disk paths if needed</span></pre>
+  <p>Each NVIDIA card shows <strong>two</strong> functions — the GPU and its
+  HDMI-audio device. You pass <em>both</em>. So you'll list four IDs total (5080
+  GPU + 5080 audio, 3080 GPU + 3080 audio).</p>
+
+  <h3><span class="stepnum">2</span>Fill the repo vars</h3>
+  <ul>
+    <li><code>ansible/group_vars/all.yml</code> → <code>vfio_pci_ids</code> (the four device-IDs).</li>
+    <li><code>ansible/inventory.ini</code> → the host's mgmt IP.</li>
+  </ul>
+
+  <h3><span class="stepnum">3</span>Run the play (pass secrets at runtime — never commit them)</h3>
+  <pre><span class="k">cd ansible</span>
+<span class="k">ansible-playbook site.yml</span> \
+  -e "tailscale_authkey=tskey-XXXX nut_monitor_password=SOMETHING"</pre>
+  <p>This sets the kernel cmdline via <strong>proxmox-boot-tool</strong> (ZFS root
+  uses systemd-boot, not grub — important detail), binds vfio-pci, blacklists the
+  NVIDIA drivers on the host, caps <code>zfs_arc_max</code> ~8 GB, installs NUT
+  against the APC, and brings up Tailscale.</p>
+
+  <h3><span class="stepnum">4</span>Reboot, then verify</h3>
+  <pre><span class="k">./scripts/verify-passthrough.sh</span></pre>
+
+  <div class="box danger">
+    <span class="t">Do not proceed until green</span>
+    <p>Every GPU <em>and</em> audio function must show
+    <code>Kernel driver in use: vfio-pci</code>, each card in a <strong>clean,
+    isolated IOMMU group</strong>, ARC capped, NUT talking to the UPS, Tailscale up.
+    If a GPU is sharing an IOMMU group with something else, fix that (ACS / slot
+    choice) <em>before</em> building VMs — a dirty group means passthrough will be
+    flaky in ways that look like random VM crashes.</p>
+  </div>
+
+  <p><strong>Green light:</strong> both GPUs on <code>vfio-pci</code> in clean
+  groups · ARC capped · NUT + Tailscale healthy.</p>
+</div>
+
+<!-- ============================ PHASE 3: NETWORK ============================ -->
+<div class="section pb">
+  <h2><span class="num">3</span>Wire the network at the friend's</h2>
+  <p class="lead">The router arrives pre-staged from Phase 0. Now physically wire it
+  and make the Proxmox bridge VLAN-aware so each VM lands in the right segment.</p>
+
+  <h3>Plug-in map (match your tape labels)</h3>
+  <table>
+    <tr><th>Port</th><th>Goes to</th><th>VLAN</th></tr>
+    <tr><td>ether1</td><td>ISP / WAN (DHCP)</td><td>—</td></tr>
+    <tr><td>sfp-sfpplus1 (10G)</td><td>Proxmox host 10G NIC (trunk)</td><td>10,20,30,40 tagged</td></tr>
+    <tr><td>ether2</td><td>Friend's mini PC (Moonlight)</td><td>30 untagged</td></tr>
+    <tr><td>ether3</td><td>Backup / ZFS box</td><td>20 untagged</td></tr>
+    <tr><td>ether4</td><td>Host BMC / IPMI</td><td>10 untagged</td></tr>
+    <tr><td>ether5–8</td><td>Spare / clients</td><td>40 untagged</td></tr>
+  </table>
+
+  <h3>Make vmbr0 VLAN-aware (Proxmox)</h3>
+  <p>In the Proxmox UI: <em>Datacenter → host → System → Network</em> → edit
+  <code>vmbr0</code> (the bridge on the 10G NIC) → tick <strong>VLAN aware</strong>.
+  Then each VM's vNIC gets a <strong>VLAN Tag</strong> set to its segment (Windows =
+  30, Services/DayZ = 20, Linux-compile = 10). The host's own mgmt IP sits on
+  VLAN 10.</p>
+
+  <div class="box info">
+    <span class="t">Put the host mgmt + IPMI on Tailscale</span>
+    <p>Install Tailscale on the host (the Ansible role did this) and confirm you can
+    reach both the Proxmox UI and the IPMI console over Tailscale from outside.
+    That's your out-of-band recovery path for a box you don't physically sit next
+    to.</p>
+  </div>
+
+  <p><strong>Green light:</strong> mini PC on ether2 pulls a <code>10.10.30.x</code>
+  lease · host reachable on VLAN 10 · Tailscale reaches host + IPMI · internet works
+  from each VLAN.</p>
+</div>
+
+<!-- ============================ PHASE 4: WINDOWS ============================ -->
+<div class="section pb">
+  <h2><span class="num">4</span><span class="star">★</span> The Windows-main VM (the friend's machine)</h2>
+  <p class="lead">This is the one your friend actually uses — Trion, point-cloud
+  work, and gaming, all streamed to his in-room mini PC. It's the first VM you build
+  and the most detailed section here. Take your time; get this rock-solid before
+  touching the others.</p>
+
+  <div class="box warn">
+    <span class="t">★ Which Windows does he need? — Windows 11 <u>Pro</u> (not Home)</span>
+    <p>This isn't a preference, it's a hard requirement: <strong>Windows 11 Home
+    caps at 128 GB of RAM. This VM gets ~138 GB.</strong> Home would simply refuse
+    to address the extra memory — the whole point of the build (holding a 120 GB+
+    point cloud in RAM) breaks. Pro supports up to 2 TB, plus it gives you RDP host
+    and cleaner headless behavior. Get a <strong>retail Windows 11 Pro</strong>
+    license. (Pro for Workstations isn't needed — that's for ReFS / 4-socket / >2 TB;
+    plain Pro covers you.)</p>
+  </div>
+
+  <h3>What you'll need on hand</h3>
+  <div class="grid">
+    <div class="card"><div class="ct">Windows 11 Pro ISO</div><div class="cm">Official Microsoft ISO, uploaded to Proxmox storage</div></div>
+    <div class="card"><div class="ct">VirtIO drivers ISO</div><div class="cm">Fedora <code>virtio-win.iso</code> — Windows can't see a virtio disk/NIC during install without it</div></div>
+    <div class="card"><div class="ct">Dummy HDMI plug</div><div class="cm">Plugged into the 5080 — gives Windows a "real" display for Sunshine to capture</div></div>
+    <div class="card"><div class="ct">Win 11 Pro license key</div><div class="cm">Retail key — see the RAM note above</div></div>
+  </div>
+
+  <h3><span class="stepnum">1</span>Create the VM shell (Windows 11 needs UEFI + TPM)</h3>
+  <p>In Proxmox <em>Create VM</em>, set these — Windows 11 will refuse to install
+  without the TPM and UEFI pieces:</p>
+  <table>
+    <tr><th>Setting</th><th>Value</th><th>Note</th></tr>
+    <tr><td>Machine</td><td><strong>q35</strong></td><td>Required for clean PCIe passthrough</td></tr>
+    <tr><td>BIOS</td><td><strong>OVMF (UEFI)</strong></td><td>+ add an EFI disk on the ZFS mirror</td></tr>
+    <tr><td>TPM</td><td><strong>Add TPM v2.0 state</strong></td><td>Win 11 hard requirement</td></tr>
+    <tr><td>CPU type</td><td><strong>host</strong></td><td>Exposes full TR-PRO feature set</td></tr>
+    <tr><td>Cores</td><td>~12–14</td><td>Keep SMT siblings together, contiguous in a CCD</td></tr>
+    <tr><td>Memory</td><td>~138 GB · <strong>ballooning OFF</strong></td><td>Passthrough needs locked RAM</td></tr>
+    <tr><td>SCSI controller</td><td>VirtIO SCSI single</td><td>Fast disk; needs the virtio ISO at install</td></tr>
+    <tr><td>Disk</td><td>VirtIO, on the ZFS mirror</td><td>OS lives on the backed-up mirror</td></tr>
+    <tr><td>Network</td><td>VirtIO, <strong>VLAN tag 30</strong></td><td>Same segment as the mini PC</td></tr>
+  </table>
+
+  <h3><span class="stepnum">2</span>Install Windows</h3>
+  <ul>
+    <li>Attach <strong>two</strong> CD drives: the Windows 11 Pro ISO and the virtio-win ISO.</li>
+    <li>When the installer shows no disks, click <em>Load driver</em> → browse the virtio ISO → load the <strong>vioscsi</strong> (storage) driver. The disk appears.</li>
+    <li>Also load the <strong>NetKVM</strong> (network) driver so networking works post-install.</li>
+    <li>Install Windows 11 Pro, enter the key.</li>
+  </ul>
+
+  <h3><span class="stepnum">3</span>Add the 5080 passthrough</h3>
+  <ul>
+    <li>VM <em>Hardware → Add → PCI Device</em>: the <strong>5080 GPU</strong>, tick <em>All Functions</em> (grabs the HDMI-audio fn too), <em>PCI-Express</em>, and <em>Primary GPU</em>.</li>
+    <li>Boot. Install the current <strong>NVIDIA driver</strong> inside Windows.</li>
+  </ul>
+  <div class="box info">
+    <span class="t">Blackwell + consumer passthrough</span>
+    <p>Modern NVIDIA drivers officially support consumer-card passthrough — no
+    "Code 43" hack needed. Keep the KVM <code>hidden</code> flag handy only if a
+    driver ever misbehaves. The 5080 is new silicon; the recent Proxmox kernel
+    (Phase 1) is what gives it clean PCIe enumeration. On a VM reboot it usually
+    FLR-resets fine; worst case a host reboot clears a stuck GPU, recoverable over
+    IPMI.</p>
+  </div>
+
+  <h3><span class="stepnum">4</span>Make it a capturable, always-ready desktop</h3>
+  <ul>
+    <li><strong>Dummy HDMI plug</strong> into the 5080 (preferred over a virtual display driver) so Windows always has a display to render/capture.</li>
+    <li>Enable <strong>auto-login</strong> so a power-cycle boots straight to a ready desktop — the friend never sees a lock screen.</li>
+    <li>Set display resolution to the target (4K60 or 1080p120).</li>
+  </ul>
+
+  <h3><span class="stepnum">5</span>Install Trion (point-cloud)</h3>
+  <ul>
+    <li>Install Trion + the point-cloud toolchain.</li>
+    <li><strong>If Trion uses a USB license dongle</strong>, pass the physical USB device through to this VM (<em>Hardware → Add → USB Device</em>).</li>
+  </ul>
+  <div class="box danger">
+    <span class="t">★ Highest-risk open item — verify early</span>
+    <p>Confirm <strong>Trion actually runs under virtualization</strong> and that its
+    dongle (if any) passes through cleanly. The spec flags this as the #1 risk. Test
+    it the moment Windows + GPU are up — before you've built everything else on the
+    assumption that it works.</p>
+  </div>
+
+  <h3><span class="stepnum">6</span>Sunshine + Moonlight (the in-room stream)</h3>
+  <ul>
+    <li>Install <strong>Sunshine</strong> on Windows-main — the 5080's NVENC makes encode essentially free.</li>
+    <li>On the friend's <strong>mini PC</strong> (wired to ether2, VLAN 30): install <strong>Moonlight</strong>, set it to auto-launch fullscreen on boot.</li>
+    <li>Because both are on VLAN 30, Moonlight auto-discovers the host; pair them (PIN).</li>
+    <li>Target <strong>4K60 or 1080p120, sub-10 ms</strong> added latency on the wired LAN.</li>
+  </ul>
+
+  <div class="box ok">
+    <span class="t">★ Green light for Phase 4</span>
+    <p>Friend sits at the mini PC, it boots straight into a fullscreen Moonlight
+    session, the Windows desktop appears at target res/latency, <strong>Trion
+    launches</strong>, and a real point-cloud job runs. That's the whole reason for
+    the build — get a clean pass here before moving on.</p>
+  </div>
+</div>
+
+<!-- ============================ PHASE 5: OTHER VMS ============================ -->
+<div class="section pb">
+  <h2><span class="num">5</span>The other three VMs</h2>
+  <p class="lead">With Windows solid, build these via OpenTofu (<code>opentofu/</code>,
+  bpg/proxmox) — a manual first pass in the UI is fine too. Each is lighter than the
+  Windows VM.</p>
+
+  <h3>Services VM (Linux) — Jellyfin + thin DBs</h3>
+  <ul>
+    <li>Linux, ~16 GB (locked, since the 3080 is passed here), ~2 cores.</li>
+    <li>Pass the <strong>RTX 3080 + its audio fn</strong> through; Jellyfin uses NVENC for transcoding.</li>
+    <li>vNIC on <strong>VLAN 20</strong>. Expose <em>only</em> via Tailscale — never WAN.</li>
+  </ul>
+
+  <h3>DayZ VM (Windows) — Deer Isle + Expansion</h3>
+  <ul>
+    <li>Small Windows VM, no GPU, ~8 GB, 2–3 cores (DayZ is largely single-thread-bound — favors clock). vNIC on <strong>VLAN 20</strong>.</li>
+    <li>SteamCMD dedicated server + CF (Community Framework) + DayZ-Expansion-Core / -Vehicles / -Market + <strong>Deer Isle</strong>, Expansion mission adapted to Deer Isle.</li>
+    <li>Required features: Deer Isle map · <strong>fly-in safezones</strong> (Expansion zone-based, position+radius, traders inside — <em>not</em> teleport) · <strong>helicopters</strong> (Expansion-Vehicles).</li>
+    <li>Outside players reach it via Tailscale, or the tightly-scoped WAN dst-nat (UDP 2302–2306 + 27016) already in the router config — never raw-exposed beyond those ports.</li>
+  </ul>
+
+  <h3>Linux compile VM (NixOS) — your remote kernel box</h3>
+  <ul>
+    <li>NixOS (decided), no GPU, <strong>ballooning ON</strong> (floor 16 / max 150 GB), 4–6 cores pinned. vNIC on <strong>VLAN 10</strong>.</li>
+    <li>Pinned RFL toolchain via a flake (exact rustc/bindgen/LLVM) — reproducible, atomic rollback so a remote box is very hard to brick.</li>
+    <li>SSH/mosh in over Tailscale. The 50 Mbps uplink is a non-issue for compiles.</li>
+  </ul>
+
+  <div class="box info">
+    <span class="t">Big-Linux mode (how you reclaim RAM for huge builds)</span>
+    <p>Default is co-resident: Windows up 24/7, Linux at its ~16 GB floor — fine for
+    most builds since <code>-j</code> parallelism is CPU-bound. For a giant tmpfs
+    build: over SSH/IPMI confirm no active Sunshine session →
+    <code>qm shutdown &lt;winvm&gt;</code> → run the job (Linux balloons up
+    automatically) → <code>qm start &lt;winvm&gt;</code> to restore the friend's
+    machine before he needs it. The friend never manages any of this.</p>
+  </div>
+</div>
+
+<!-- ============================ PHASE 6 + 7 ============================ -->
+<div class="section pb">
+  <h2><span class="num">6</span>Resilience &amp; backups</h2>
+  <ul>
+    <li><strong>NUT against the APC SMT1500C</strong> (Ansible configured it) — and actually <strong>test a simulated power-loss shutdown</strong>. Mandatory for an unattended remote box. The 1000 W UPS is graceful-shutdown headroom, not ride-through.</li>
+    <li><strong>Proxmox Backup Server</strong> on the 64 GB / RAIDZ1 box — kept on the <strong>local LAN</strong> so bulk backups run at 10G speed (a full 120 GB over the 50 Mbps uplink is ~5.5 h — impractical). Run a first VM backup.</li>
+    <li><strong>Offsite</strong> via physical cold-drive rotation: <code>zfs send | zstd</code> to a bare drive in a USB dock, stored cold. Only small incrementals cross the WAN. That's your 3-2-1.</li>
+  </ul>
+  <div class="box warn">
+    <span class="t">Storage discipline</span>
+    <p>The friend's real project files and point clouds live on the <strong>backed-up
+    ZFS mirror</strong>, never on the 4 TB scratch drive (no redundancy, transient
+    only). Make this a habit from day one.</p>
+  </div>
+
+  <h2 style="margin-top:8mm"><span class="num">7</span>Validation &amp; sign-off</h2>
+  <table>
+    <tr><th>Who</th><th>Check</th></tr>
+    <tr><td>Friend</td><td>Full Moonlight session at target res/latency · Trion launches · a real point-cloud job runs</td></tr>
+    <tr><td>Penn</td><td>SSH compile from outside via Tailscale · Jellyfin stream within the uplink cap · trigger Big-Linux mode once (Windows off → Linux balloons → <code>qm start</code> Windows)</td></tr>
+    <tr><td>Both</td><td>Simulated power-loss → graceful shutdown · first PBS backup restores cleanly</td></tr>
+  </table>
+</div>
+
+<!-- ============================ OPEN ITEMS + CHEAT SHEET ============================ -->
+<div class="section pb">
+  <h2><span class="num">!</span>Open items to verify (carry these in your head)</h2>
+  <table>
+    <tr><th>#</th><th>Item</th><th>Risk</th></tr>
+    <tr><td>1</td><td>Trion runs under virtualization + dongle passes through</td><td><strong style="color:#b32424">HIGH — verify in Phase 4 before relying on the VM</strong></td></tr>
+    <tr><td>2</td><td>IPMI/BMC populated on the SE board variant</td><td>High — it's your only console</td></tr>
+    <tr><td>3</td><td>RAIDZ1 backup box is LAN-local</td><td>Med — else bulk backup over 50 Mbps isn't viable</td></tr>
+    <tr><td>4</td><td>IOMMU groups isolate 5080 &amp; 3080 cleanly</td><td>Med — dirty groups = flaky passthrough</td></tr>
+    <tr><td>5</td><td>CXL enablement on 9965WX + WRX90E firmware</td><td>Low — keep a PCIe5 x16 slot free for later</td></tr>
+    <tr><td>6</td><td>Both Gen5 NVMe have adequate heatsinking for 24/7</td><td>Low — they run hot</td></tr>
+  </table>
+
+  <h2 style="margin-top:8mm"><span class="num">⌘</span>Command cheat sheet</h2>
+  <h4>On the Proxmox host</h4>
+  <pre><span class="c"># discover passthrough IDs / NIC / disks</span>
+<span class="k">lspci -nn | grep -iE 'nvidia|audio'</span>
+<span class="k">ip -br link</span>
+<span class="c"># host prep (this repo)</span>
+<span class="k">cd ansible && ansible-playbook site.yml -e "tailscale_authkey=... nut_monitor_password=..."</span>
+<span class="k">./scripts/verify-passthrough.sh</span>   <span class="c"># must be all-green before VMs</span>
+<span class="c"># Big-Linux mode</span>
+<span class="k">qm shutdown &lt;winvm&gt;</span>   <span class="c"># Linux balloons up</span>
+<span class="k">qm start &lt;winvm&gt;</span>      <span class="c"># restore friend's machine</span></pre>
+  <h4>On the MikroTik (bench)</h4>
+  <pre><span class="k">/interface bridge vlan print</span>     <span class="c"># tagged/untagged map</span>
+<span class="k">/ip address print</span>                <span class="c"># four gateways</span>
+<span class="k">/ip dhcp-server lease print</span>      <span class="c"># clients in the right subnet</span>
+<span class="k">/interface bridge set bridge vlan-filtering=yes</span>   <span class="c"># LAST, after verifying access</span></pre>
+
+  <div class="box ok" style="margin-top:6mm">
+    <span class="t">TL;DR for your friend</span>
+    <p>His machine is a Windows 11 <strong>Pro</strong> VM with the 5080 passed
+    straight through, ~138 GB of RAM, streamed to his mini PC over the in-room wired
+    LAN with Sunshine → Moonlight. He turns the mini PC on, it boots into his
+    desktop. Everything else on the box is invisible to him.</p>
+  </div>
+</div>
+
+</body>
+</html>
