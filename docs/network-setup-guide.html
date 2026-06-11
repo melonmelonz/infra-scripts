@@ -1,14 +1,15 @@
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
-<title>Server Network Setup — Quick Guide</title>
+<title>Build Day Guide — Network, SSH, Gaming VM</title>
 <style>
   @page { size: letter; margin: 14mm 14mm 12mm 14mm; }
   * { box-sizing: border-box; }
   body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1a1a2e; font-size: 10.5pt; line-height: 1.45; margin: 0; }
   h1 { font-size: 19pt; margin: 0 0 2px; letter-spacing: -0.5px; }
   .sub { color: #5a5a72; font-size: 10pt; margin-bottom: 14px; }
-  h2 { font-size: 12.5pt; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #1a1a2e; }
+  h2 { font-size: 13pt; margin: 18px 0 6px; padding: 4px 8px; background: #1a1a2e; color: #fff; border-radius: 4px; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12px 0 4px; page-break-after: avoid; }
   .step { display: flex; gap: 10px; margin: 10px 0; page-break-inside: avoid; }
   .stepnum { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #1a1a2e; color: #fff; font-weight: 700; text-align: center; line-height: 26px; font-size: 12pt; }
   .stepbody { flex: 1; }
@@ -22,45 +23,52 @@
   tr.hl td { background: #fff7df; font-weight: 600; }
   .chip { display: inline-block; border-radius: 3px; padding: 0 6px; font-size: 8.5pt; font-weight: 700; color: #fff; }
   .v10 { background: #6c4fbf; } .v20 { background: #2a8f6d; } .v30 { background: #d2622a; } .v40 { background: #2a6fd2; } .wan { background: #b03a48; } .na { background: #8a8aa0; }
-  .note { background: #eef6ff; border-left: 4px solid #2a6fd2; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; }
-  .warn { background: #fff3f0; border-left: 4px solid #b03a48; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; }
+  .note { background: #eef6ff; border-left: 4px solid #2a6fd2; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; page-break-inside: avoid; }
+  .warn { background: #fff3f0; border-left: 4px solid #b03a48; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; page-break-inside: avoid; }
+  .good { background: #effaf4; border-left: 4px solid #2a8f6d; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; page-break-inside: avoid; }
   .ok { color: #2a8f6d; font-weight: 700; }
-  .twocol { display: flex; gap: 14px; }
-  .twocol > div { flex: 1; }
+  .who { display: inline-block; background: #6c4fbf; color: #fff; border-radius: 3px; padding: 0 7px; font-size: 8.5pt; font-weight: 700; vertical-align: 2px; }
+  .who.claude { background: #2a8f6d; }
+  .who.friend { background: #d2622a; }
+  ul { margin: 4px 0 8px; padding-left: 20px; }
+  li { margin: 2px 0; }
   .footer { margin-top: 14px; color: #8a8aa0; font-size: 8.5pt; border-top: 1px solid #c9cbd8; padding-top: 5px; }
+  .pagebreak { page-break-before: always; }
 </style>
 <body>
 
-<h1>Server Network Setup — Quick Guide</h1>
-<div class="sub">No Linux knowledge needed. Two cables, five typed lines, one photo. About 10 minutes.</div>
+<h1>Build Day Guide — Network, SSH, Gaming VM</h1>
+<div class="sub">Goal for today: network up &rarr; SSH working &rarr; Windows VM with RTX 5080 passthrough &rarr; Sunshine streaming to the mini PC over Moonlight.
+Tags show who does each part: <span class="who">PERSON AT SERVER</span> <span class="who claude">PENN + CLAUDE (remote)</span> <span class="who friend">FRIEND / MINI PC</span></div>
 
-<h2>Router port map (MikroTik RB5009 — ports are numbered on the front)</h2>
+<h2>Router port map (MikroTik RB5009 — ports numbered on the front)</h2>
 <table>
   <tr><th style="width:90px">Port</th><th>What plugs in</th><th style="width:120px">Network</th></tr>
   <tr class="hl"><td><b>ether1</b></td><td><b>Cable from the home router (a LAN port)</b> — this is the internet feed</td><td><span class="chip wan">WAN</span></td></tr>
-  <tr><td>ether2</td><td>Mini PC (game streaming, in the TV room)</td><td><span class="chip v30">30 gaming</span></td></tr>
-  <tr><td>ether3</td><td>Backup / storage box</td><td><span class="chip v20">20 servers</span></td></tr>
-  <tr><td>ether4</td><td>Server's BMC / IPMI management port (small separate port)</td><td><span class="chip v10">10 mgmt</span></td></tr>
-  <tr><td>ether5–7</td><td>Laptops / any trusted computer (Penn's laptop lives here)</td><td><span class="chip v40">40 trusted</span></td></tr>
-  <tr class="hl"><td><b>ether8</b></td><td><b>Server's main 10G network port</b> (temporary — moves to SFP+ later)</td><td><span class="chip v10">trunk</span></td></tr>
-  <tr><td>SFP+ cage</td><td>Future: server's 10G link via S+RJ10 module (on order)</td><td><span class="chip na">later</span></td></tr>
+  <tr class="hl"><td>ether2</td><td><b>Mini PC (Moonlight, in the TV room)</b></td><td><span class="chip v30">30 gaming</span></td></tr>
+  <tr><td>ether3</td><td>Backup / storage box (later)</td><td><span class="chip v20">20 servers</span></td></tr>
+  <tr><td>ether4</td><td>Server's BMC / IPMI management port (small separate port; later)</td><td><span class="chip v10">10 mgmt</span></td></tr>
+  <tr class="hl"><td>ether5–7</td><td><b>Penn's laptop / any trusted computer</b></td><td><span class="chip v40">40 trusted</span></td></tr>
+  <tr class="hl"><td><b>ether8</b></td><td><b>Server's main 10G network port</b> (temporary — moves to SFP+ when module arrives)</td><td><span class="chip v10">trunk</span></td></tr>
+  <tr><td>SFP+ cage</td><td>Future: server's 10G link via S+RJ10 / 10Gtek module (on order)</td><td><span class="chip na">later</span></td></tr>
 </table>
-<div class="note"><b>Today you only need the two bold rows:</b> internet feed into <b>ether1</b>, server into <b>ether8</b>. Everything else can be plugged in any time.</div>
+<div class="note"><b>Bold rows are needed today:</b> internet into <b>ether1</b>, server into <b>ether8</b>, Penn's laptop in <b>ether5</b>, mini PC in <b>ether2</b> (mini PC can wait until Phase 4).</div>
 
-<h2>Steps at the server</h2>
+<h2>Phase 1 — Network + SSH <span class="who">PERSON AT SERVER</span> (~10 min)</h2>
 
 <div class="step"><div class="stepnum">1</div><div class="stepbody">
-  <b class="title">Plug in the two cables</b> — home router → <b>ether1</b>; server's 10G port → <b>ether8</b>.
-  The server has <b>two identical 10G ports</b> — if step 3's first ping fails, move the cable to the other one.
+  <b class="title">Plug in the cables</b> — home router &rarr; <b>ether1</b>; server's 10G port &rarr; <b>ether8</b>.
+  The server has <b>two identical 10G ports</b> — if step 3's first ping fails, move the cable to the other one.<br>
+  <b>Also plug the APC UPS's USB cable into the server</b> (any USB port) — the safe-shutdown service set up in Phase 2 talks to the UPS over it.
 </div></div>
 
 <div class="step"><div class="stepnum">2</div><div class="stepbody">
-  <b class="title">Log in at the server</b> — plug a monitor + keyboard into the server.
-  Username <code>root</code>, password is the one set during the Proxmox install.
+  <b class="title">Log in at the server</b> — monitor + keyboard on the server.
+  Username <code>root</code>, password from the Proxmox install.
 </div></div>
 
 <div class="step"><div class="stepnum">3</div><div class="stepbody">
-  <b class="title">Type these four lines</b> (press Enter after each; straight quotes, exact spacing).
+  <b class="title">Type these four lines</b> (Enter after each; straight quotes, exact spacing).
   <b>Each command is ONE line</b> — if it wraps on this page, keep typing on the same line:
 <pre>sed -i 's|address .*|address 10.10.10.10/24|; s|gateway .*|gateway 10.10.10.1|' /etc/network/interfaces
 
@@ -70,25 +78,90 @@ ifreload -a
 
 ping -c 2 10.10.10.1 &amp;&amp; ping -c 2 1.1.1.1</pre>
   You want replies from <span class="ok">both pings</span>:<br>
-  • <code>10.10.10.1</code> replies = server sees the router. If not → check the ether8 cable / try the other 10G port.<br>
-  • <code>1.1.1.1</code> replies = internet works. If not → check the ether1 cable.
+  • <code>10.10.10.1</code> replies = server sees the router. If not &rarr; check the ether8 cable / try the other 10G port.<br>
+  • <code>1.1.1.1</code> replies = internet works. If not &rarr; check the ether1 cable.
 </div></div>
 
 <div class="step"><div class="stepnum">4</div><div class="stepbody">
-  <b class="title">Type this one line</b> — it sets up remote access and prints a hardware report:
+  <b class="title">Type this one line — this is the SSH setup.</b> It downloads a script from the project repo that
+  installs Penn's SSH public key into <code>/root/.ssh/authorized_keys</code>, fixes the hostname file, and prints a hardware report:
 <pre>curl -fsSL https://raw.githubusercontent.com/melonmelonz/infra-scripts/main/scripts/host-bootstrap.sh | bash</pre>
-  It should end with <code>BOOTSTRAP DONE</code>.
+  It should end with <code>BOOTSTRAP DONE</code>.<br>
+  <b>Why this is all SSH needs:</b> Proxmox already runs an SSH server. Adding the key means Penn's laptop is
+  recognized and logs in with no password. Nothing else to install or configure.
 </div></div>
 
 <div class="step"><div class="stepnum">5</div><div class="stepbody">
-  <b class="title">Take a photo</b> of everything from <code>=== IP ===</code> down and send it to Penn.
-  That's it — the rest happens remotely.
+  <b class="title">Photo everything from <code>=== IP ===</code> down, send to Penn.</b>
+  The GPU lines (<code>[10de:....]</code> codes) are the critical part — Phase 2 needs them.
 </div></div>
 
-<div class="warn"><b>If the report's <code>=== IOMMU ===</code> section is empty:</b> reboot, press Del to enter BIOS,
-make sure <b>SVM</b> and <b>IOMMU</b> are both Enabled (Advanced → CPU / AMD CBS), boot back up, redo step 4.</div>
+<div class="warn"><b>If <code>=== IOMMU ===</code> printed nothing:</b> reboot, press Del for BIOS, set <b>SVM</b> and
+<b>IOMMU</b> to Enabled (Advanced &rarr; CPU / AMD CBS), boot, redo step 4. While in BIOS also confirm
+<b>Above 4G Decoding</b> and <b>Resizable BAR</b> are Enabled (needed for GPU passthrough).</div>
 
-<div class="footer">infra-scripts · github.com/melonmelonz/infra-scripts · router config as-built: docs/rb5009-asbuilt.rsc · 2026-06-11</div>
+<div class="pagebreak"></div>
+
+<h2>Phase 2 — Connect by SSH + host prep <span class="who claude">PENN + CLAUDE</span> (~20 min + 1 reboot)</h2>
+
+<h3>Connecting by SSH (from Penn's laptop, wired into ether5)</h3>
+<pre>ssh root@10.10.10.10</pre>
+<ul>
+  <li><b>No password prompt</b> — the key from Phase 1 step 4 handles it. First connect asks to trust the host fingerprint: type <code>yes</code>.</li>
+  <li><b>Laptop must be wired to ether5/6/7.</b> Home wifi cannot reach 10.10.10.x — the firewall blocks it by design. (This restriction disappears once Tailscale is up, below.)</li>
+  <li>The Proxmox web interface also works now: <code>https://10.10.10.10:8006</code> (accept the certificate warning, login root).</li>
+  <li><b>If SSH asks for a password:</b> step 4 didn't complete — re-run the curl line at the console.</li>
+  <li><b>If SSH times out:</b> laptop not on ether5/6/7, or step 3's pings weren't actually green.</li>
+</ul>
+
+<h3>Host prep (Claude runs this; listed so the work is visible)</h3>
+<ul>
+  <li>Fill in <code>ansible/inventory.ini</code> (host = 10.10.10.10) and <code>vfio_pci_ids</code> in <code>ansible/group_vars/all.yml</code> with the GPU IDs from the Phase 1 photo — both the 5080 and 3080, each with its audio function.</li>
+  <li>Run <code>ansible-playbook site.yml</code>. What it configures:
+    <ul>
+      <li><b>VFIO</b> — kernel cmdline (<code>amd_iommu=on iommu=pt</code>), binds both NVIDIA cards to vfio-pci at boot, blacklists nouveau/nvidia on the host. The host never touches the GPUs; VMs own them.</li>
+      <li><b>ZFS</b> — caps ARC cache at 8GiB so VM RAM is never squeezed.</li>
+      <li><b>NUT</b> — APC UPS monitoring over the USB cable; clean host shutdown on power loss.</li>
+      <li><b>Tailscale</b> — installs; activates when Penn supplies an auth key (free account at tailscale.com &rarr; Settings &rarr; Keys). After that, SSH works from anywhere, no ether5 cable.</li>
+    </ul></li>
+  <li>Reboot the host, then run <code>scripts/verify-passthrough.sh</code> on it — checks IOMMU active, both GPUs on vfio-pci, IOMMU group isolation, ARC limit, UPS responding. <b>Every line must say PASS before Phase 3.</b></li>
+</ul>
+
+<h2>Phase 3 — Windows VM + RTX 5080 + Sunshine <span class="who claude">PENN + CLAUDE</span> (~1–2 hrs, mostly Windows installing)</h2>
+<ul>
+  <li><b>ISOs:</b> Windows 11 + virtio-win drivers, downloaded straight to the host (it has internet now).</li>
+  <li><b>VM shape:</b> q35 machine, UEFI (OVMF) + TPM 2.0 (Win11 requires it), CPU type <code>host</code>, 32GB RAM to start (locked in place — GPU passthrough pins it), disk on the NVMe ZFS pool, <b>network on VLAN 30 (gaming)</b> — same segment as the mini PC, which is exactly what makes Moonlight auto-discovery work.</li>
+  <li><b>Install order matters:</b>
+    <ol>
+      <li>Install Windows using the emulated display (Proxmox web console), loading virtio drivers during setup.</li>
+      <li>Enable RDP inside Windows (backup way in once the console goes away).</li>
+      <li>Attach the 5080 (GPU + audio function, PCIe, all functions) to the VM; reboot it.</li>
+      <li>Install NVIDIA drivers inside Windows — the 5080 is now a real GPU in the VM.</li>
+      <li>Install <b>Sunshine</b> (the streaming host).</li>
+    </ol></li>
+</ul>
+<div class="warn"><b>Headless GPU catch:</b> a passthrough GPU with no monitor renders nothing, and Sunshine needs an
+active display. <b>Today's fix:</b> install Virtual Display Driver (software, free). <b>Better permanent fix:</b> a ~$7
+<b>HDMI dummy plug</b> in the 5080 — order with the 10G module.</div>
+
+<h2>Phase 4 — Moonlight on the mini PC <span class="who friend">FRIEND / MINI PC</span> (~10 min)</h2>
+<ul>
+  <li>Plug the mini PC into <b>ether2</b>. It lands on the gaming network (10.10.30.x) automatically.</li>
+  <li>Install <b>Moonlight</b> (moonlight-game-streaming.org) on it.</li>
+  <li>Open Moonlight — the Windows VM appears by itself (same network segment, auto-discovery). Click it, enter the pairing PIN shown by Sunshine on the VM (Penn reads it over RDP), done.</li>
+  <li>The stream is switched in hardware inside the router — it never crosses VLANs or touches the router CPU. Latency is sub-millisecond on the LAN.</li>
+</ul>
+
+<div class="good"><b>End state for today:</b> friend launches Moonlight on the mini PC and plays games running on the
+5080 in the server. Penn has SSH + web UI to the host (and from anywhere, once Tailscale has a key).</div>
+
+<h3>Shopping list (nothing blocks today)</h3>
+<ul>
+  <li>10G SFP+ RJ45 module (10Gtek / S+RJ10 style) — on order. Arrives &rarr; goes in SFP+ cage, server cable moves to it, Claude flips one router setting.</li>
+  <li>HDMI dummy plug (~$7) — replaces the virtual display driver, plug into the 5080.</li>
+</ul>
+
+<div class="footer">infra-scripts · github.com/melonmelonz/infra-scripts · router as-built: docs/rb5009-asbuilt.rsc · full details: docs/architecture.md, docs/network-topology.md, docs/build-day-runbook.md · 2026-06-11</div>
 
 </body>
 </html>
