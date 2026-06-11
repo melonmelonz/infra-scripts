@@ -67,7 +67,7 @@ fi
 # A passthrough GPU should not share an IOMMU group with unrelated devices.
 hdr "IOMMU group isolation"
 for addr in $nvidia_addrs; do
-  grp=$(basename "$(dirname "$(readlink -f "/sys/bus/pci/devices/$addr/iommu_group" 2>/dev/null)")" 2>/dev/null)
+  grp=$(basename "$(readlink -f "/sys/bus/pci/devices/$addr/iommu_group" 2>/dev/null)" 2>/dev/null)
   if [ -z "$grp" ]; then
     red "$addr has no iommu_group"
     continue
