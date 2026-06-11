@@ -14,76 +14,55 @@ bootstrap below, then the Ansible playbook runs from Penn's laptop.
 
 ## Bootstrap walkthrough (for the person at the server)
 
-You don't need to know Linux for this. You'll log in, paste one block of
-text, and send the output back. ~5 minutes.
+You don't need to know Linux. You'll plug in two cables, log in, type
+five short lines, and send a photo of the output back. ~10 minutes.
 
-### Step 1 — Get a shell on the server
+Network is already set up: the MikroTik router has VLANs configured and
+the server gets the management network (10.10.10.x) on its port.
 
-Easiest: plug a monitor + keyboard into the server and log in as
-`root` with the password set during install.
+### Step 0 — Cables
 
-Or, from a browser on the same network: go to `https://<server-ip>:8006`
-(accept the certificate warning), log in as `root`, click the server name
-in the left sidebar (`pve01`), then click **Shell** at the top right.
+1. Server's 10G network port -> MikroTik port **ether8**
+   (the server has TWO identical 10G ports — if Step 2 fails, try the other one)
+2. Home router LAN port -> MikroTik port **ether1** (this is the internet feed)
 
-### Step 2 — Check the network
+### Step 1 — Log in
 
-Paste this and press Enter:
+Plug a monitor + keyboard into the server. Log in as `root` with the
+password set during install.
 
-```bash
-ip -4 addr show vmbr0; ip route | head -2; ping -c 2 1.1.1.1
-```
+### Step 2 — Fix the network (type these, Enter after each)
 
-You want to see two ping replies. **Also note the IP address shown** (the
-`inet` line, e.g. `inet 10.0.0.50/24`) — Penn needs it, and it must be on
-the same network as his laptop (`10.0.0.x`).
-
-If the IP is on the wrong network (e.g. `192.168.100.x` while everything
-else in the house is `10.0.0.x`):
+Type carefully — straight quotes, exact spacing inside the quotes:
 
 ```bash
-nano /etc/network/interfaces
-```
-
-Find the `iface vmbr0` block and change the `address` line to a free IP on
-the right network (e.g. `address 10.0.0.50/24`) and the `gateway` line to
-the router (e.g. `gateway 10.0.0.1`). Save with Ctrl+O Enter, exit with
-Ctrl+X, then:
-
-```bash
-sed -i "s/^\([0-9.]*\)\(\s*pve01\)/10.0.0.50\2/" /etc/hosts
+sed -i 's|address .*|address 10.10.10.10/24|; s|gateway .*|gateway 10.10.10.1|' /etc/network/interfaces
+sed -i '/bridge-fd/a\ bridge-vlan-aware yes\n bridge-vids 2-4094' /etc/network/interfaces
 ifreload -a
-ping -c 2 1.1.1.1
+ping -c 2 10.10.10.1 && ping -c 2 1.1.1.1
 ```
 
-(If you used a different IP than `10.0.0.50`, use that in the `sed` line.)
+You want to see replies from BOTH pings:
+- `10.10.10.1` replying = server can reach the router. If not: check the
+  ether8 cable, or try the server's other 10G port.
+- `1.1.1.1` replying = internet works. If not: check the ether1 cable.
 
-### Step 3 — Paste the bootstrap block
-
-This adds Penn's SSH key (so he can finish setup remotely) and prints the
-hardware info he needs. Paste the WHOLE block at once:
+### Step 3 — Run the bootstrap (one line)
 
 ```bash
-mkdir -p /root/.ssh && chmod 700 /root/.ssh
-echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6znTfAPIcKX9TYD2UQBWQqJL1paLev6gSzKGB/IoRV lushfund@protonmail.ch' >> /root/.ssh/authorized_keys
-chmod 600 /root/.ssh/authorized_keys
-echo '=== IP ==='; ip -4 addr show vmbr0 | grep inet
-echo '=== GPUs ==='; lspci -nn -d 10de:
-echo '=== IOMMU ==='; dmesg | grep -iE 'iommu|amd-vi' | head -5
-echo '=== DISKS ==='; ls -l /dev/disk/by-id/ | grep -v part
-echo '=== BOOTSTRAP DONE ==='
+curl -fsSL https://raw.githubusercontent.com/melonmelonz/infra-scripts/main/scripts/host-bootstrap.sh | bash
 ```
+
+This installs Penn's SSH key and prints a hardware report ending in
+`BOOTSTRAP DONE`.
 
 ### Step 4 — Send the output back
 
-Copy everything from `=== IP ===` down and send it to Penn (a photo of the
-screen is fine). That's it — everything else happens remotely.
+Photo of everything from `=== IP ===` down. Done — the rest happens
+remotely.
 
-If `=== IOMMU ===` printed nothing: reboot into BIOS and check that
-**SVM** and **IOMMU** are Enabled (Advanced > CPU / AMD CBS), then redo
-Step 3.
-
----
+If `=== IOMMU ===` printed nothing: reboot into BIOS, check **SVM** and
+**IOMMU** are Enabled (Advanced > CPU / AMD CBS), then redo Step 3.
 
 ## After bootstrap (from the control machine)
 
