@@ -58,11 +58,21 @@ This installs Penn's SSH key and prints a hardware report ending in
 
 ### Step 4 — Send the output back
 
-Photo of everything from `=== IP ===` down. Done — the rest happens
-remotely.
+Photo of everything from `=== IP ===` down.
 
 If `=== IOMMU ===` printed nothing: reboot into BIOS, check **SVM** and
 **IOMMU** are Enabled (Advanced > CPU / AMD CBS), then redo Step 3.
+
+### Step 5 — Remote access (one more line, then you're done)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/melonmelonz/infra-scripts/main/scripts/host-phase2.sh | bash
+```
+
+It prints a **login link** (`https://login.tailscale.com/...`). Send a
+photo of the link to Penn and **wait** — when he clicks it, the script
+finishes on its own and prints `PHASE 2 DONE`. Photo that final output
+too. That's everything — you can walk away from the server.
 
 ## After bootstrap (from the control machine)
 
