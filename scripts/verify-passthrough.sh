@@ -110,11 +110,11 @@ fi
 hdr "apcupsd / UPS"
 if command -v apcaccess >/dev/null 2>&1; then
   ups_status=$(apcaccess -p STATUS 2>/dev/null | tr -d ' ')
-  if [ -n "$ups_status" ]; then
+  if [ -n "$ups_status" ] && [ "$ups_status" != "COMMLOST" ]; then
     charge=$(apcaccess -p BCHARGE 2>/dev/null)
     green "UPS reachable (STATUS=$ups_status, BCHARGE=$charge)"
   else
-    red "apcaccess returns empty STATUS (enable Modbus on the UPS LCD: Configuration > Modbus > Enabled)"
+    red "apcupsd can't talk to the UPS (STATUS=${ups_status:-<empty>}) — enable Modbus on the UPS LCD: Configuration > Modbus > Enabled"
   fi
 else
   red "apcaccess not installed (apcupsd role did not run?)"
