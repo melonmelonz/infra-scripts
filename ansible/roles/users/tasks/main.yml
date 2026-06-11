@@ -1,0 +1,33 @@
+---
+- name: Ensure sudo is installed
+  ansible.builtin.apt:
+    name: sudo
+    state: present
+
+- name: Create admin users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+  loop: "{{ admin_users }}"
+
+- name: Ensure .ssh dir for dib
+  ansible.builtin.file:
+    path: /home/dib/.ssh
+    state: directory
+    owner: dib
+    group: dib
+    mode: "0700"
+  when: "'dib' in admin_users"
+
+- name: Authorize Penn's key for dib
+  ansible.builtin.lineinfile:
+    path: /home/dib/.ssh/authorized_keys
+    create: true
+    line: "{{ penn_ssh_pubkey }}"
+    owner: dib
+    group: dib
+    mode: "0600"
+  when: "'dib' in admin_users"

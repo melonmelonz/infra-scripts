@@ -106,19 +106,18 @@ else
   red "zfs_arc_max = $arc_now bytes (expected $EXPECTED_ARC_BYTES)"
 fi
 
-# --- 5. NUT talks to the UPS -----------------------------------------------
-hdr "NUT / UPS"
-if command -v upsc >/dev/null 2>&1; then
-  ups_name=$(upsc -l 2>/dev/null | head -n1)
-  if [ -n "$ups_name" ] && upsc "$ups_name" battery.charge >/dev/null 2>&1; then
-    charge=$(upsc "$ups_name" battery.charge 2>/dev/null)
-    status=$(upsc "$ups_name" ups.status 2>/dev/null)
-    green "UPS '$ups_name' reachable (battery.charge=$charge, status=$status)"
+# --- 5. apcupsd talks to the UPS --------------------------------------------
+hdr "apcupsd / UPS"
+if command -v apcaccess >/dev/null 2>&1; then
+  ups_status=$(apcaccess -p STATUS 2>/dev/null | tr -d ' ')
+  if [ -n "$ups_status" ]; then
+    charge=$(apcaccess -p BCHARGE 2>/dev/null)
+    green "UPS reachable (STATUS=$ups_status, BCHARGE=$charge)"
   else
-    red "upsc cannot read a UPS (check usbhid-ups driver + USB cable)"
+    red "apcaccess returns empty STATUS (enable Modbus on the UPS LCD: Configuration > Modbus > Enabled)"
   fi
 else
-  red "upsc not installed (NUT role did not run?)"
+  red "apcaccess not installed (apcupsd role did not run?)"
 fi
 
 # --- 6. Tailscale up --------------------------------------------------------

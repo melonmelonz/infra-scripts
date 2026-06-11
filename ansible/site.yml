@@ -3,7 +3,8 @@
   hosts: proxmox
   become: true
   roles:
+    - users
     - vfio
     - zfs_tune
-    - nut
+    - apcupsd
     - tailscale

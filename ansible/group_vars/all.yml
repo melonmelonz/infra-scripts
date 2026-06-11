@@ -4,6 +4,12 @@
 # 3080's pair when that card goes in).
 vfio_pci_ids: "10de:2c02,10de:22e9"
 
+# Sudo-capable admin users (passwords set out-of-band, never committed).
+admin_users:
+  - dib      # Penn
+  - stilgar  # on-site friend
+penn_ssh_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA6znTfAPIcKX9TYD2UQBWQqJL1paLev6gSzKGB/IoRV lushfund@protonmail.ch"
+
 # Kernel cmdline additions for IOMMU + passthrough.
 kernel_cmdline_opts: "amd_iommu=on iommu=pt"
 
@@ -14,7 +20,7 @@ zfs_arc_max_bytes: 8589934592
 #   ansible-playbook site.yml -e "tailscale_authkey=tskey-..."
 tailscale_authkey: ""
 
-# NUT: APC SMT1500C over USB.
-nut_ups_name: apc
-nut_monitor_user: upsmon
-nut_monitor_password: "CHANGE_ME_AT_RUNTIME"
+# apcupsd: APC SMT1500C (SmartConnect) over USB modbus.
+ups_name: apc
+ups_shutdown_battery_pct: 30
+ups_shutdown_minutes_left: 10

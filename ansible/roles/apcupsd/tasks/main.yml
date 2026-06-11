@@ -1,0 +1,52 @@
+---
+# The SMT1500C (SmartConnect/Microlink) doesn't speak USB-HID, and Debian's
+# NUT apc_modbus driver is built without USB support. apcupsd's modbus-USB
+# mode supports SMT natively, so we use it instead of NUT.
+- name: Remove NUT (conflicts with apcupsd over the same USB device)
+  ansible.builtin.apt:
+    name:
+      - nut
+      - nut-server
+      - nut-client
+      - nut-modbus
+    state: absent
+    purge: true
+
+- name: Install apcupsd
+  ansible.builtin.apt:
+    name: apcupsd
+    state: present
+
+- name: Configure apcupsd (modbus over USB)
+  ansible.builtin.copy:
+    dest: /etc/apcupsd/apcupsd.conf
+    content: |
+      ## apcupsd.conf v1.1 ##
+      UPSNAME {{ ups_name }}
+      UPSCABLE usb
+      UPSTYPE modbus
+      DEVICE
+      ONBATTERYDELAY 6
+      # Shut the host down when either threshold hits.
+      BATTERYLEVEL {{ ups_shutdown_battery_pct }}
+      MINUTES {{ ups_shutdown_minutes_left }}
+      TIMEOUT 0
+      KILLDELAY 0
+      NETSERVER on
+      NISIP 127.0.0.1
+      NISPORT 3551
+    mode: "0644"
+  notify: Restart apcupsd
+
+- name: Mark apcupsd as configured
+  ansible.builtin.copy:
+    dest: /etc/default/apcupsd
+    content: "ISCONFIGURED=yes\n"
+    mode: "0644"
+  notify: Restart apcupsd
+
+- name: Enable apcupsd
+  ansible.builtin.systemd:
+    name: apcupsd
+    enabled: true
+    state: started
