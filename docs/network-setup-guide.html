@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Server Network Setup — Quick Guide</title>
+<style>
+  @page { size: letter; margin: 14mm 14mm 12mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: #1a1a2e; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 2px; letter-spacing: -0.5px; }
+  .sub { color: #5a5a72; font-size: 10pt; margin-bottom: 14px; }
+  h2 { font-size: 12.5pt; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #1a1a2e; }
+  .step { display: flex; gap: 10px; margin: 10px 0; page-break-inside: avoid; }
+  .stepnum { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #1a1a2e; color: #fff; font-weight: 700; text-align: center; line-height: 26px; font-size: 12pt; }
+  .stepbody { flex: 1; }
+  .stepbody b.title { font-size: 11.5pt; }
+  code, pre { font-family: "DejaVu Sans Mono", Menlo, monospace; }
+  code { background: #eef0f6; padding: 1px 4px; border-radius: 3px; font-size: 9pt; }
+  pre { background: #14142b; color: #e8e8f0; padding: 9px 12px; border-radius: 6px; font-size: 8.6pt; line-height: 1.55; white-space: pre-wrap; word-break: break-all; margin: 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 9.5pt; }
+  th { background: #1a1a2e; color: #fff; text-align: left; padding: 5px 8px; font-size: 9pt; }
+  td { border: 1px solid #c9cbd8; padding: 4px 8px; vertical-align: top; }
+  tr.hl td { background: #fff7df; font-weight: 600; }
+  .chip { display: inline-block; border-radius: 3px; padding: 0 6px; font-size: 8.5pt; font-weight: 700; color: #fff; }
+  .v10 { background: #6c4fbf; } .v20 { background: #2a8f6d; } .v30 { background: #d2622a; } .v40 { background: #2a6fd2; } .wan { background: #b03a48; } .na { background: #8a8aa0; }
+  .note { background: #eef6ff; border-left: 4px solid #2a6fd2; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; }
+  .warn { background: #fff3f0; border-left: 4px solid #b03a48; padding: 7px 10px; border-radius: 0 5px 5px 0; margin: 8px 0; font-size: 9.5pt; }
+  .ok { color: #2a8f6d; font-weight: 700; }
+  .twocol { display: flex; gap: 14px; }
+  .twocol > div { flex: 1; }
+  .footer { margin-top: 14px; color: #8a8aa0; font-size: 8.5pt; border-top: 1px solid #c9cbd8; padding-top: 5px; }
+</style>
+<body>
+
+<h1>Server Network Setup — Quick Guide</h1>
+<div class="sub">No Linux knowledge needed. Two cables, five typed lines, one photo. About 10 minutes.</div>
+
+<h2>Router port map (MikroTik RB5009 — ports are numbered on the front)</h2>
+<table>
+  <tr><th style="width:90px">Port</th><th>What plugs in</th><th style="width:120px">Network</th></tr>
+  <tr class="hl"><td><b>ether1</b></td><td><b>Cable from the home router (a LAN port)</b> — this is the internet feed</td><td><span class="chip wan">WAN</span></td></tr>
+  <tr><td>ether2</td><td>Mini PC (game streaming, in the TV room)</td><td><span class="chip v30">30 gaming</span></td></tr>
+  <tr><td>ether3</td><td>Backup / storage box</td><td><span class="chip v20">20 servers</span></td></tr>
+  <tr><td>ether4</td><td>Server's BMC / IPMI management port (small separate port)</td><td><span class="chip v10">10 mgmt</span></td></tr>
+  <tr><td>ether5–7</td><td>Laptops / any trusted computer (Penn's laptop lives here)</td><td><span class="chip v40">40 trusted</span></td></tr>
+  <tr class="hl"><td><b>ether8</b></td><td><b>Server's main 10G network port</b> (temporary — moves to SFP+ later)</td><td><span class="chip v10">trunk</span></td></tr>
+  <tr><td>SFP+ cage</td><td>Future: server's 10G link via S+RJ10 module (on order)</td><td><span class="chip na">later</span></td></tr>
+</table>
+<div class="note"><b>Today you only need the two bold rows:</b> internet feed into <b>ether1</b>, server into <b>ether8</b>. Everything else can be plugged in any time.</div>
+
+<h2>Steps at the server</h2>
+
+<div class="step"><div class="stepnum">1</div><div class="stepbody">
+  <b class="title">Plug in the two cables</b> — home router → <b>ether1</b>; server's 10G port → <b>ether8</b>.
+  The server has <b>two identical 10G ports</b> — if step 3's first ping fails, move the cable to the other one.
+</div></div>
+
+<div class="step"><div class="stepnum">2</div><div class="stepbody">
+  <b class="title">Log in at the server</b> — plug a monitor + keyboard into the server.
+  Username <code>root</code>, password is the one set during the Proxmox install.
+</div></div>
+
+<div class="step"><div class="stepnum">3</div><div class="stepbody">
+  <b class="title">Type these four lines</b> (press Enter after each; straight quotes, exact spacing).
+  <b>Each command is ONE line</b> — if it wraps on this page, keep typing on the same line:
+<pre>sed -i 's|address .*|address 10.10.10.10/24|; s|gateway .*|gateway 10.10.10.1|' /etc/network/interfaces
+
+sed -i '/bridge-fd/a\ bridge-vlan-aware yes\n bridge-vids 2-4094' /etc/network/interfaces
+
+ifreload -a
+
+ping -c 2 10.10.10.1 &amp;&amp; ping -c 2 1.1.1.1</pre>
+  You want replies from <span class="ok">both pings</span>:<br>
+  • <code>10.10.10.1</code> replies = server sees the router. If not → check the ether8 cable / try the other 10G port.<br>
+  • <code>1.1.1.1</code> replies = internet works. If not → check the ether1 cable.
+</div></div>
+
+<div class="step"><div class="stepnum">4</div><div class="stepbody">
+  <b class="title">Type this one line</b> — it sets up remote access and prints a hardware report:
+<pre>curl -fsSL https://raw.githubusercontent.com/melonmelonz/infra-scripts/main/scripts/host-bootstrap.sh | bash</pre>
+  It should end with <code>BOOTSTRAP DONE</code>.
+</div></div>
+
+<div class="step"><div class="stepnum">5</div><div class="stepbody">
+  <b class="title">Take a photo</b> of everything from <code>=== IP ===</code> down and send it to Penn.
+  That's it — the rest happens remotely.
+</div></div>
+
+<div class="warn"><b>If the report's <code>=== IOMMU ===</code> section is empty:</b> reboot, press Del to enter BIOS,
+make sure <b>SVM</b> and <b>IOMMU</b> are both Enabled (Advanced → CPU / AMD CBS), boot back up, redo step 4.</div>
+
+<div class="footer">infra-scripts · github.com/melonmelonz/infra-scripts · router config as-built: docs/rb5009-asbuilt.rsc · 2026-06-11</div>
+
+</body>
+</html>
