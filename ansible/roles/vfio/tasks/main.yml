@@ -1,26 +1,46 @@
 ---
-# Proxmox installs boot two ways: ZFS-root installs use proxmox-boot-tool
-# (/etc/kernel/cmdline), LVM/ext4 installs use GRUB. Detect and do the right one.
+# Proxmox boot matrix: proxmox-boot-tool systems sync ESPs via `refresh`
+# (systemd-boot variant reads /etc/kernel/cmdline, GRUB variant reads
+# /etc/default/grub); plain-GRUB systems need `update-grub`. Set whichever
+# files exist and trigger the right refresher.
 - name: Detect proxmox-boot-tool managed boot
   ansible.builtin.stat:
     path: /etc/kernel/proxmox-boot-uuids
   register: pbt_uuids
 
-- name: Ensure IOMMU options in /etc/kernel/cmdline (proxmox-boot-tool systems)
+- name: Detect /etc/kernel/cmdline
+  ansible.builtin.stat:
+    path: /etc/kernel/cmdline
+  register: kernel_cmdline
+
+- name: Detect /etc/default/grub
+  ansible.builtin.stat:
+    path: /etc/default/grub
+  register: grub_default
+
+- name: Ensure IOMMU options in /etc/kernel/cmdline
   ansible.builtin.lineinfile:
     path: /etc/kernel/cmdline
     regexp: '^(.*?)(\s+amd_iommu=on)?(\s+iommu=pt)?\s*$'
     line: "\\1 {{ kernel_cmdline_opts }}"
     backrefs: true
-  when: pbt_uuids.stat.exists
+  when: kernel_cmdline.stat.exists
   notify: Refresh proxmox boot
 
-- name: Ensure IOMMU options in GRUB cmdline (GRUB systems)
+- name: Ensure IOMMU options in GRUB cmdline (proxmox-boot-tool ESPs)
   ansible.builtin.lineinfile:
     path: /etc/default/grub
     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
     line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet {{ kernel_cmdline_opts }}"'
-  when: not pbt_uuids.stat.exists
+  when: grub_default.stat.exists and pbt_uuids.stat.exists
+  notify: Refresh proxmox boot
+
+- name: Ensure IOMMU options in GRUB cmdline (plain GRUB)
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet {{ kernel_cmdline_opts }}"'
+  when: grub_default.stat.exists and not pbt_uuids.stat.exists
   notify: Update grub
 
 - name: Load vfio modules at boot
