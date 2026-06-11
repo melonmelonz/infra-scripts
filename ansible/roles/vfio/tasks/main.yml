@@ -1,11 +1,27 @@
 ---
-- name: Ensure IOMMU options in /etc/kernel/cmdline
+# Proxmox installs boot two ways: ZFS-root installs use proxmox-boot-tool
+# (/etc/kernel/cmdline), LVM/ext4 installs use GRUB. Detect and do the right one.
+- name: Detect proxmox-boot-tool managed boot
+  ansible.builtin.stat:
+    path: /etc/kernel/proxmox-boot-uuids
+  register: pbt_uuids
+
+- name: Ensure IOMMU options in /etc/kernel/cmdline (proxmox-boot-tool systems)
   ansible.builtin.lineinfile:
     path: /etc/kernel/cmdline
     regexp: '^(.*?)(\s+amd_iommu=on)?(\s+iommu=pt)?\s*$'
     line: "\\1 {{ kernel_cmdline_opts }}"
     backrefs: true
+  when: pbt_uuids.stat.exists
   notify: Refresh proxmox boot
+
+- name: Ensure IOMMU options in GRUB cmdline (GRUB systems)
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet {{ kernel_cmdline_opts }}"'
+  when: not pbt_uuids.stat.exists
+  notify: Update grub
 
 - name: Load vfio modules at boot
   ansible.builtin.copy:

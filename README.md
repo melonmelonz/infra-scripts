@@ -74,6 +74,29 @@ photo of the link to Penn and **wait** — when he clicks it, the script
 finishes on its own and prints `PHASE 2 DONE`. Photo that final output
 too. That's everything — you can walk away from the server.
 
+## Reinstall as ZFS RAID1 (decided 2026-06-11)
+
+The first install landed on LVM/one drive. We want mirrored ZFS across both
+2TB NVMes so a dead drive never needs a site visit. For the person at the
+server:
+
+1. Plug the Proxmox USB stick back in. Type `reboot`, then tap **F8**
+   while it restarts and pick the USB stick from the boot menu.
+2. Choose **Install Proxmox VE (Graphical)**. Click **Agree**.
+3. On the *Target Harddisk* screen click **Options**:
+   - Filesystem: **zfs (RAID1)**
+   - Harddisk 0 and Harddisk 1 must both say **Samsung ... 9100 PRO** (the
+     two 1.8T drives). Any other slot: **— do not use —**. Click OK, Next.
+4. Country/keyboard: whatever's right. Password: **same one as before**.
+   Email: anything.
+5. *Management Network* screen:
+   - Interface: same network card as last time (the cabled 10G port)
+   - Hostname: `sietch.mdtek.com`
+   - IP: `10.10.10.10/24`  Gateway: `10.10.10.1`  DNS: `10.10.10.1`
+6. Install. When it reboots, pull the USB stick out.
+7. Log back in as root and redo **Step 2, Step 3, and Step 5** above
+   (same lines — they're safe to repeat). Photo the outputs as before.
+
 ## After bootstrap (from the control machine)
 
 1. Put the server IP in `ansible/inventory.ini` (replace `REPLACE_WITH_HOST_IP`).

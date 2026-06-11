@@ -6,6 +6,14 @@
     mode: "0644"
   notify: Update initramfs
 
+# The zfs module isn't loaded until a pool exists (e.g. LVM-root installs).
+# The modprobe.d setting above covers it whenever ZFS does come up.
+- name: Check whether the zfs module is loaded
+  ansible.builtin.stat:
+    path: /sys/module/zfs/parameters/zfs_arc_max
+  register: zfs_param
+
 - name: Apply zfs_arc_max live (no reboot needed for the running value)
   ansible.builtin.shell: "echo {{ zfs_arc_max_bytes }} > /sys/module/zfs/parameters/zfs_arc_max"
   changed_when: true
+  when: zfs_param.stat.exists

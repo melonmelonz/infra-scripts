@@ -1,9 +1,8 @@
 ---
-# Filled on build day via `lspci -nn | grep -iE 'nvidia|audio'`.
 # Include BOTH the GPU function AND its HDMI-audio function for each card.
-# Format: comma-separated vendor:device pairs, e.g.
-# "10de:2c02,10de:22e9,10de:2206,10de:1aef"
-vfio_pci_ids: "REPLACE:WITH,REAL:IDS"
+# RTX 5080 + its audio fn (only GPU installed as of 2026-06-11; append the
+# 3080's pair when that card goes in).
+vfio_pci_ids: "10de:2c02,10de:22e9"
 
 # Kernel cmdline additions for IOMMU + passthrough.
 kernel_cmdline_opts: "amd_iommu=on iommu=pt"
